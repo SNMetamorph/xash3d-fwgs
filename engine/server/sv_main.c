@@ -154,6 +154,69 @@ qboolean SV_HasActivePlayers( void )
 }
 
 /*
+================
+SV_GetConnectedClientsCount
+
+returns connected clients count (and optionally bots count)
+================
+*/
+int SV_GetConnectedClientsCount(int *bots)
+{
+	int index;
+	int	clients;
+
+	clients = 0;
+	if( svs.clients )
+	{
+		if( bots )
+			*bots = 0;
+
+		for( index = 0; index < svs.maxclients; index++ )
+		{
+			if( svs.clients[index].state >= cs_connected )
+			{
+				if( FBitSet( svs.clients[index].flags, FCL_FAKECLIENT ))
+				{
+					if( bots )
+						*bots++;
+				}
+				else
+					clients++;
+			}
+		}
+	}
+	return clients;
+}
+
+/*
+================
+SV_UpdateStatusLine
+
+updates dedicated server status line in console
+================
+*/
+void SV_UpdateStatusLine()
+{
+	int clientsCount;
+	char szStatus[128];
+	static double lastTime;
+
+	if( host.type != HOST_DEDICATED )
+		return;
+
+	// update only every 1/2 seconds
+	if ((sv.time - lastTime) < 0.5f)
+		return;
+
+	clientsCount = SV_GetConnectedClientsCount(NULL);
+	Q_snprintf(szStatus, sizeof(szStatus) - 1, "%.1f fps %2i/%2i on %16s", 1.f / sv.frametime, clientsCount, svs.maxclients, host.game.levelName);
+#ifdef XASH_WIN32
+	Wcon_SetStatus(szStatus);
+#endif
+	lastTime = sv.time;
+}
+
+/*
 ===================
 SV_UpdateMovevars
 
@@ -650,6 +713,9 @@ void Host_ServerFrame( void )
 	// clear edict flags for next frame
 	SV_PrepWorldFrame ();
 
+	// update dedicated server status line in console
+	SV_UpdateStatusLine ();
+
 	// send a heartbeat to the master if needed
 	Master_Heartbeat ();
 }
@@ -738,22 +804,10 @@ void SV_AddToMaster( netadr_t from, sizebuf_t *msg )
 {
 	uint	challenge;
 	char	s[MAX_INFO_STRING] = "0\n"; // skip 2 bytes of header
-	int	clients = 0, bots = 0, index;
+	int	clients = 0, bots = 0;
 	int	len = sizeof( s );
 
-	if( svs.clients )
-	{
-		for( index = 0; index < svs.maxclients; index++ )
-		{
-			if( svs.clients[index].state >= cs_connected )
-			{
-				if( FBitSet( svs.clients[index].flags, FCL_FAKECLIENT ))
-					bots++;
-				else clients++;
-			}
-		}
-	}
-
+	clients = SV_GetConnectedClientsCount(&bots);
 	challenge = MSG_ReadUBitLong( msg, sizeof( uint ) << 3 );
 
 	Info_SetValueForKey( s, "protocol", va( "%d", PROTOCOL_VERSION ), len ); // protocol version
