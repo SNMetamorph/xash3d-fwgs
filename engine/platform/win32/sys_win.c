@@ -46,6 +46,21 @@ qboolean Sys_DebuggerPresent( void )
 	return IsDebuggerPresent();
 }
 
+static void *Sys_TimerThread( void *v )
+{
+
+}
+
+void Platform_Delay( double time )
+{
+	
+}
+
+void Platform_TimerInit( void )
+{
+
+}
+
 void Platform_ShellExecute( const char *path, const char *parms )
 {
 	if( !Q_strcmp( path, GENERIC_UPDATE_PAGE ) || !Q_strcmp( path, PLATFORM_UPDATE_PAGE ))

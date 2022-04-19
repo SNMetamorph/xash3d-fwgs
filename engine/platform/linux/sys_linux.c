@@ -16,7 +16,70 @@ GNU General Public License for more details.
 #include <time.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include "platform/platform.h"
+
+static double frametime;
+static pthread_mutex_t tmutex;
+static qboolean flag;
+static pthread_t timer;
+static pthread_cond_t tsignal;
+
+static void *Sys_TimerThread( void *v )
+{
+	struct timespec time, time1, time2, time3 = { 0,0 };
+	time.tv_sec = 0;
+	time.tv_nsec = frametime * 1e9;
+	while (1)
+	{
+
+		long long tdiff;
+		nanosleep(&time, &time1);
+		//printf("%ld\n", time1.tv_nsec );
+		time1.tv_sec = 0;
+		time1.tv_nsec = 0;
+		clock_gettime(CLOCK_MONOTONIC, &time2);
+		tdiff = time2.tv_nsec - time3.tv_nsec - frametime * 1e9;
+		if (tdiff < 0)
+			tdiff = 0;
+		if (tdiff > frametime / 2.0 * 1e9)
+			tdiff = 0;
+
+		pthread_mutex_lock(&tmutex);
+
+		time.tv_nsec = 1e9 * frametime - tdiff;
+		if (flag == 0)
+			pthread_cond_signal(&tsignal);
+		flag = 1;
+		pthread_mutex_unlock(&tmutex);
+		time3 = time2;
+	}
+}
+
+void Platform_Delay( double time )
+{
+	if (flag)
+	{
+		flag = 0;
+		return;
+	}
+
+	pthread_mutex_lock(&tmutex);
+	frametime = time;
+	while (!flag)
+		pthread_cond_wait(&tsignal, &tmutex);
+	flag = 0;
+	pthread_mutex_unlock(&tmutex);
+}
+
+void Platform_TimerInit( void )
+{
+	flag = 1;
+	tmutex = PTHREAD_MUTEX_INITIALIZER;
+	tsignal = PTHREAD_COND_INITIALIZER;
+	frametime = 1.0 / host_maxfps->value;
+	pthread_create(&timer, NULL, Sys_TimerThread, NULL);
+}
 
 qboolean Sys_DebuggerPresent( void )
 {

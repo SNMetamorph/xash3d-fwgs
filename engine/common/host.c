@@ -274,6 +274,7 @@ Host_CheckSleep
 */
 void Host_CheckSleep( void )
 {
+#if 0
 	int sleeptime = host_sleeptime->value;
 
 	if( Host_IsDedicated() )
@@ -299,6 +300,9 @@ void Host_CheckSleep( void )
 			Sys_Sleep( sleeptime );
 		}
 	}
+#else
+	Platform_Delay( 1.0 / host_maxfps->value );
+#endif
 }
 
 void Host_NewInstance( const char *name, const char *finalmsg )
@@ -643,7 +647,7 @@ qboolean Host_FilterTime( float time )
 	{
 		// limit fps to withing tolerable range
 		fps = bound( MIN_FPS, fps, MAX_FPS );
-
+#if 0
 		if( Host_IsDedicated() )
 		{
 			if(( host.realtime - oldtime ) < ( 1.0 / ( fps + 1.0 )) * scale)
@@ -654,6 +658,7 @@ qboolean Host_FilterTime( float time )
 			if(( host.realtime - oldtime ) < ( 1.0 / fps ) * scale )
 				return false;
 		}
+#endif
 	}
 
 	host.frametime = host.realtime - oldtime;
@@ -1218,6 +1223,8 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 		Cbuf_AddText( va( "exec %s\n", Cvar_VariableString( "servercfgfile" )));
 		Cbuf_Execute();
 	}
+
+	Platform_TimerInit();
 
 	// main window message loop
 	while( !host.crashed )
