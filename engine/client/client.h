@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "pm_movevars.h"
 #include "ref_params.h"
 #include "render_api.h"
+#include "mobility_int.h"
 #include "cdll_exp.h"
 #include "screenfade.h"
 #include "protocol.h"
@@ -1108,6 +1109,7 @@ void pfnPIC_DrawAdditive( int x, int y, int width, int height, const wrect_t *pr
 //
 qboolean Mobile_Init( void );
 void Mobile_Shutdown( void );
+pfnTextInputCallback_t Mobile_GetTextInputCallback( void );
 
 //
 // cl_video.c

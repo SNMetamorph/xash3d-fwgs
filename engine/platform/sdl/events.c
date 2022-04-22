@@ -318,6 +318,12 @@ SDLash_InputEvent
 static void SDLash_InputEvent( SDL_TextInputEvent input )
 {
 	char *text;
+	pfnTextInputCallback_t textCallback;
+	textCallback = Mobile_GetTextInputCallback();
+	if( textCallback ) {
+		textCallback( input.text );
+	}
+
 	for( text = input.text; *text; text++ )
 	{
 		int ch;

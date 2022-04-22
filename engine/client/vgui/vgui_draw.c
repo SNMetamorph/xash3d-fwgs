@@ -23,28 +23,15 @@ GNU General Public License for more details.
 #include "input.h"
 #ifdef XASH_SDL
 #include <SDL.h>
-static SDL_Cursor* s_pDefaultCursor[20];
 #endif
 #include "platform/platform.h"
 
+static cursor_type_t s_pCursorMapping[dc_last];
 static enum VGUI_KeyCode s_pVirtualKeyTrans[256];
 static enum VGUI_DefaultCursor s_currentCursor;
 static HINSTANCE s_pVGuiSupport; // vgui_support library
 static convar_t	*vgui_utf8 = NULL;
-
-// Helper functions for vgui backend
-
-/*void VGUI_HideCursor( void )
-{
-	host.mouse_visible = false;
-	SDL_HideCursor();
-}
-
-void VGUI_ShowCursor( void )
-{
-	host.mouse_visible = true;
-	SDL_ShowCursor();
-}*/
+static qboolean s_bSupressActivity;
 
 void GAME_EXPORT *VGUI_EngineMalloc(size_t size)
 {
@@ -53,7 +40,7 @@ void GAME_EXPORT *VGUI_EngineMalloc(size_t size)
 
 qboolean GAME_EXPORT VGUI_IsInGame( void )
 {
-	return cls.state == ca_active && cls.key_dest == key_game;
+	return cls.state == ca_active && cls.key_dest == key_game && !s_bSupressActivity;
 }
 
 void GAME_EXPORT VGUI_GetMousePos( int *_x, int *_y )
@@ -68,61 +55,27 @@ void GAME_EXPORT VGUI_GetMousePos( int *_x, int *_y )
 
 void VGUI_InitCursors( void )
 {
-	// load up all default cursors
-#if SDL_VERSION_ATLEAST( 2, 0, 0 )
-	s_pDefaultCursor[dc_none] = NULL;
-	s_pDefaultCursor[dc_arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-	s_pDefaultCursor[dc_ibeam] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-	s_pDefaultCursor[dc_hourglass]= SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_WAIT);
-	s_pDefaultCursor[dc_crosshair]= SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR);
-	s_pDefaultCursor[dc_up] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-	s_pDefaultCursor[dc_sizenwse] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
-	s_pDefaultCursor[dc_sizenesw] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
-	s_pDefaultCursor[dc_sizewe] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-	s_pDefaultCursor[dc_sizens] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-	s_pDefaultCursor[dc_sizeall] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-	s_pDefaultCursor[dc_no] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO);
-	s_pDefaultCursor[dc_hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-#endif
+	s_pCursorMapping[dc_none] = CursorType_None;
+	s_pCursorMapping[dc_arrow] = CursorType_Arrow;
+	s_pCursorMapping[dc_ibeam] = CursorType_Ibeam;
+	s_pCursorMapping[dc_hourglass] = CursorType_Wait;
+	s_pCursorMapping[dc_crosshair] = CursorType_Crosshair;
+	s_pCursorMapping[dc_up] = CursorType_Up;
+	s_pCursorMapping[dc_sizenwse] = CursorType_SizeNwSe;
+	s_pCursorMapping[dc_sizenesw] = CursorType_SizeNeSw;
+	s_pCursorMapping[dc_sizewe] = CursorType_SizeWe;
+	s_pCursorMapping[dc_sizens] = CursorType_SizeNs;
+	s_pCursorMapping[dc_sizeall] = CursorType_SizeAll;
+	s_pCursorMapping[dc_no] = CursorType_No;
+	s_pCursorMapping[dc_hand] = CursorType_Hand;
 }
 
 void GAME_EXPORT VGUI_CursorSelect( enum VGUI_DefaultCursor cursor )
 {
-	qboolean visible;
-
-	if( cls.key_dest != key_game || cl.paused )
+	if( s_bSupressActivity )
 		return;
 
-	switch( cursor )
-	{
-		case dc_user:
-		case dc_none:
-			visible = false;
-			break;
-		default:
-			visible = true;
-			break;
-	}
-
-	host.mouse_visible = visible;
-
-#if SDL_VERSION_ATLEAST( 2, 0, 0 )
-	/// TODO: platform cursors
-
-	if( CVAR_TO_BOOL( touch_emulate ) )
-		return;
-
-	if( host.mouse_visible )
-	{
-		SDL_SetCursor( s_pDefaultCursor[cursor] );
-		SDL_ShowCursor( true );
-	}
-	else
-	{
-		SDL_ShowCursor( false );
-		Key_EnableTextInput( false, true );
-	}
-#endif
+	Platform_SetCursorType( s_pCursorMapping[cursor] );
 	s_currentCursor = cursor;
 }
 
@@ -134,7 +87,7 @@ byte GAME_EXPORT VGUI_GetColor( int i, int j)
 // Define and initialize vgui API
 int GAME_EXPORT VGUI_UtfProcessChar( int in )
 {
-	if( CVAR_TO_BOOL( vgui_utf8 ) )
+	if( CVAR_TO_BOOL( vgui_utf8 ))
 		return Con_UtfProcessCharForce( in );
 	else
 		return in;
@@ -174,7 +127,7 @@ vguiapi_t vgui =
 
 qboolean VGui_IsActive( void )
 {
-	return vgui.initialized;
+	return vgui.initialized && !s_bSupressActivity;
 }
 
 void VGui_FillAPIFromRef( vguiapi_t *to, const ref_interface_t *from )
@@ -209,6 +162,7 @@ void VGui_Startup( const char *clientlib, int width, int height )
 	char vguiloader[256];
 	char vguilib[256];
 
+	s_bSupressActivity = false;
 	vguiloader[0] = vguilib[0] = '\0';
 
 	if( failed )
@@ -472,14 +426,15 @@ enum VGUI_KeyCode VGUI_MapKey( int keyCode )
 
 void VGui_KeyEvent( int key, int down )
 {
-	if( !vgui.initialized )
+	if( !vgui.initialized || s_bSupressActivity )
 		return;
 
 	switch( key )
 	{
 	case K_MOUSE1:
-		if( down && host.mouse_visible )
-			Key_EnableTextInput( true, false );
+		if( down && host.mouse_visible ) {
+			Key_EnableTextInput(true, false);
+		}
 		vgui.Mouse( down ? MA_PRESSED : MA_RELEASED, MOUSE_LEFT );
 		return;
 	case K_MOUSE2:
@@ -515,7 +470,7 @@ void VGui_MouseMove( int x, int y )
 
 void VGui_Paint( void )
 {
-	if(vgui.initialized)
+	if( vgui.initialized && !s_bSupressActivity )
 		vgui.Paint();
 }
 
@@ -530,4 +485,9 @@ void *GAME_EXPORT VGui_GetPanel( void )
 	if( vgui.initialized )
 		return vgui.GetPanel();
 	return NULL;
+}
+
+void VGui_SupressActivity( qboolean enable )
+{
+	s_bSupressActivity = enable;
 }

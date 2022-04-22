@@ -18,10 +18,11 @@ GNU General Public License for more details.
 #include "mobility_int.h"
 #include "library.h"
 #include "input.h"
+#include "vgui_draw.h"
 #include "platform/platform.h"
 
 mobile_engfuncs_t *gMobileEngfuncs;
-
+static pfnTextInputCallback_t g_pfnTextInputCallback;
 convar_t *vibration_length;
 convar_t *vibration_enable;
 
@@ -103,6 +104,11 @@ static void pfnTouch_RemoveButton( const char *name )
 	Touch_RemoveButton( name, true );
 }
 
+static void pfnSetTextInputCallback( pfnTextInputCallback_t callback )
+{
+	g_pfnTextInputCallback = callback;
+}
+
 static mobile_engfuncs_t gpMobileEngfuncs =
 {
 	MOBILITY_API_VERSION,
@@ -118,13 +124,20 @@ static mobile_engfuncs_t gpMobileEngfuncs =
 	Sys_Warn,
 	pfnGetNativeObject,
 	ID_SetCustomClientID,
-	_COM_ParseFileSafe
+	_COM_ParseFileSafe,
+	Platform_GetClipboardText,
+	Platform_SetClipboardText,
+	VGui_SupressActivity,
+	Platform_SetCursorType,
+	Platform_GetKeyModifiers,
+	pfnSetTextInputCallback
 };
 
 qboolean Mobile_Init( void )
 {
 	qboolean success = false;
 	pfnMobilityInterface ExportToClient;
+	g_pfnTextInputCallback = NULL;
 
 	// find a mobility interface
 	ExportToClient = COM_GetProcAddress( clgame.hInstance, MOBILITY_CLIENT_EXPORT );
@@ -143,4 +156,9 @@ qboolean Mobile_Init( void )
 void Mobile_Shutdown( void )
 {
 	Cmd_RemoveCommand( "vibrate" );
+}
+
+pfnTextInputCallback_t Mobile_GetTextInputCallback( void )
+{
+	return g_pfnTextInputCallback;
 }
