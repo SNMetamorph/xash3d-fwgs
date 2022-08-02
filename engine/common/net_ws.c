@@ -670,6 +670,30 @@ qboolean NET_IsLocalAddress( netadr_t adr )
 }
 
 /*
+====================
+NET_IsLanAddress
+====================
+*/
+qboolean NET_IsLanAddress( netadr_t adr )
+{
+	if( adr.type == NA_LOOPBACK )
+	{
+		return true;
+	}
+	else if( adr.type == NA_IP || adr.type == NA_BROADCAST )
+	{
+		// 127.x.x.x and 10.x.x.x networks
+		if( adr.ip[0] == 127 || adr.ip[0] == 10 )
+			return true;
+
+		// 192.168.x.x and 172.16.x.x - 172.31.x.x networks
+		if(( adr.ip[0] == 192 && adr.ip[1] == 168 ) || ( adr.ip[0] == 172 && ( adr.ip[1] >= 16 && adr.ip[1] <= 31 )))
+			return true;
+	}
+	return false;
+}
+
+/*
 =============
 NET_StringToAdr
 
