@@ -141,6 +141,7 @@ qboolean SNDDMA_Init( void )
 	Con_Printf( "Using SDL audio driver: %s @ %d Hz\n", SDL_GetCurrentAudioDriver( ), obtained.freq );
 
 	dma.initialized = true;
+	dma.backendName = "SDL";
 
 	SNDDMA_Activate( true );
 
