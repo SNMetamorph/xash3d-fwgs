@@ -171,6 +171,7 @@ Default build-depended cvar and constant values
 	#define DEFAULT_MODE_WIDTH   960
 	#define DEFAULT_MODE_HEIGHT  544
 	#define DEFAULT_ALLOWCONSOLE 1
+	#define DEFAULT_JOY_DEADZONE "4096"
 #elif XASH_MOBILE_PLATFORM
 	#define DEFAULT_TOUCH_ENABLE "1"
 	#define DEFAULT_M_IGNORE     "1"
@@ -190,6 +191,10 @@ Default build-depended cvar and constant values
 #ifndef DEFAULT_M_IGNORE
 	#define DEFAULT_M_IGNORE "0"
 #endif // DEFAULT_M_IGNORE
+
+#ifndef DEFAULT_JOY_DEADZONE
+	#define DEFAULT_JOY_DEADZONE "0"
+#endif // DEFAULT_JOY_DEADZONE
 
 #ifndef DEFAULT_DEV
 	#define DEFAULT_DEV 0
