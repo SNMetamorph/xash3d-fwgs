@@ -75,6 +75,19 @@ const size_t __vrtld_num_exports = sizeof( aux_exports ) / sizeof( *aux_exports 
 
 /* end of export crap */
 
+static const char *PSVita_GetLaunchParameter( char *outbuf )
+{
+	SceAppUtilAppEventParam param;
+	memset( &param, 0, sizeof( param ) );
+	sceAppUtilReceiveAppEvent( &param );
+	if( param.type == 0x05 )
+	{
+		sceAppUtilAppEventParseLiveArea( &param, outbuf );
+		return outbuf;
+	}
+	return NULL;
+}
+
 void Platform_ShellExecute( const char *path, const char *parms )
 {
 	Con_Reportf( S_WARN "Tried to shell execute ;%s; -- not supported\n", path );
@@ -82,12 +95,27 @@ void Platform_ShellExecute( const char *path, const char *parms )
 
 void PSVita_Init( void )
 {
+	char param[2048] = { 0 };
 	char xashdir[1024] = { 0 };
+	SceAppUtilInitParam initParam = { 0 };
+	SceAppUtilBootParam bootParam = { 0 };
 
 	// cd to the base dir immediately for library loading to work
-	if ( PSVita_GetBasePath( xashdir, sizeof( xashdir ) ) )
+	if( PSVita_GetBasePath( xashdir, sizeof( xashdir )))
 	{
 		chdir( xashdir );
+	}
+
+	sceAppUtilInit( &initParam, &bootParam );
+
+	// check if the user wants debug mode
+	if( PSVita_GetLaunchParameter( param ))
+	{
+		if( !Q_strcmp( param, "dev" ))
+		{
+			Con_Reportf( S_NOTE "Enabled developer mode from launcher.\n" );
+			Cvar_DirectSet( &host_developer, "2" );
+		}
 	}
 
 	sceTouchSetSamplingState( SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_STOP );
@@ -97,7 +125,7 @@ void PSVita_Init( void )
 	scePowerSetGpuXbarClockFrequency( 166 );
 	sceSysmoduleLoadModule( SCE_SYSMODULE_NET );
 
-	if ( vrtld_init( 0 ) < 0 )
+	if( vrtld_init( 0 ) < 0 )
 	{
 		Sys_Error( "Could not init vrtld: %s\n", vrtld_dlerror( ) );
 	}
