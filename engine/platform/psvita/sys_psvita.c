@@ -95,6 +95,7 @@ void Platform_ShellExecute( const char *path, const char *parms )
 
 void PSVita_Init( void )
 {
+	string errorMsg;
 	char param[2048] = { 0 };
 	char xashdir[1024] = { 0 };
 	SceAppUtilInitParam initParam = { 0 };
@@ -127,7 +128,10 @@ void PSVita_Init( void )
 
 	if( vrtld_init( 0 ) < 0 )
 	{
-		Sys_Error( "Could not init vrtld: %s\n", vrtld_dlerror( ) );
+		// Host_Error might not show a message box here since framecount is 0
+		Q_snprintf( errorMsg, sizeof( errorMsg ), "Could not init vrtld:\n%s", vrtld_dlerror() );
+		MSGBOX( errorMsg );
+		Sys_Error( "%s\n", errorMsg );
 	}
 
 	// init vitaGL, leaving some memory for DLL mapping
