@@ -123,8 +123,14 @@ static void Sys_FlushLogfile( void )
 void Sys_InitLog( void )
 {
 	const char	*mode;
+#if XASH_PSVITA
+	// force-enable logging when developer is set to 2+
+	const qboolean force_log = ( host_developer.value > DEV_NORMAL );
+#else
+	const qboolean force_log = false;
+#endif
 
-	if( Sys_CheckParm( "-log" ) && host.allow_console != 0 )
+	if(( Sys_CheckParm( "-log" ) || force_log ) && host.allow_console != 0 )
 	{
 		s_ld.log_active = true;
 		Q_strncpy( s_ld.log_path, "engine.log", sizeof( s_ld.log_path ));
@@ -265,10 +271,18 @@ static void Sys_PrintStdout( const char *logtime, const char *msg )
 	IOS_Log( buf );
 #endif // TARGET_OS_IOS
 
-#if (XASH_NSWITCH && NSWITCH_DEBUG) || XASH_PSVITA // REMOVEME
+#if XASH_NSWITCH && NSWITCH_DEBUG
 	// just spew it to stderr normally in debug mode
 	fprintf( stderr, "%s %s", logtime, buf );
 #endif // XASH_NSWITCH && NSWITCH_DEBUG
+
+#if XASH_PSVITA
+	// spew to stderr only in developer mode
+	if( host_developer.value )
+	{
+		fprintf( stderr, "%s %s", logtime, buf );
+	}
+#endif
 
 #elif !XASH_WIN32 // Wcon does the job
 	Sys_PrintLogfile( STDOUT_FILENO, logtime, msg, XASH_COLORIZE_CONSOLE );
