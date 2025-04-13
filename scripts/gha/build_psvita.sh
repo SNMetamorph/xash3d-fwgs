@@ -31,7 +31,7 @@ make -C vitaGL NO_TEX_COMBINER=1 HAVE_UNFLIPPED_FBOS=1 HAVE_PTHREAD=1 MATH_SPEED
 echo "Building vrtld..."
 
 pushd vita-rtld || die
-cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release || die_configure
+cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Debug || die_configure
 cmake --build build -- -j$JOBS || die
 cmake --install build || die
 popd
@@ -46,9 +46,9 @@ popd
 
 echo "Building engine..."
 
-./waf configure -T release --psvita || die_configure
+./waf configure -T debug --psvita || die_configure
 ./waf build install --destdir=pkgtemp/data/xash3d -v || die
-cp build/engine/xash.vpk pkgtemp/
+#cp build/engine/xash.vpk pkgtemp/
 
 echo "Building HLSDK..."
 
