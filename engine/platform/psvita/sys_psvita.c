@@ -27,7 +27,7 @@ GNU General Public License for more details.
 #include <sys/reent.h>
 
 #define DATA_PATH "data/xash3d"
-#define MAX_ARGV 5 // "" -log -dev X NULL
+#define MAX_ARGV 9 // "" -log -dev X +xrcon_enable X +xrcon_address X NULL 
 
 // 200MB libc heap, 512K main thread stack, 40MB for loading game DLLs
 // the rest goes to vitaGL
@@ -143,6 +143,10 @@ int PSVita_GetArgv( int in_argc, char **in_argv, char ***out_argv )
 			fake_argv[fake_argc++] = "-log";
 			fake_argv[fake_argc++] = "-dev";
 			fake_argv[fake_argc++] = "2";
+			fake_argv[fake_argc++] = "+xrcon_enable";
+			fake_argv[fake_argc++] = "1";
+			fake_argv[fake_argc++] = "+xrcon_address";
+			fake_argv[fake_argc++] = "0.0.0.0:27000";
 		}
 	}
 
